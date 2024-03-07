@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Typing Practice</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            font-size: 24px;
+            background-color: #ffe4e1;
+            margin: 0;
+            padding: 0;
+        }
+        #typed-sentence span {
+            color: black;
+        }
+        #typed-sentence span.correct {
+            color: green;
+        }
+        #typed-sentence span.incorrect {
+            color: red;
+        }
+        #typing-input, #user-name {
+            font-size: 24px;
+            padding: 10px;
+            margin-top: 20px;
+            border: 2px solid #ccc;
+            background-color: #fff;
+            color: black;
+            width: 60%;
+            outline: none;
+        }
+        #typed-sentence {
+            min-height: 30px;
+            position: relative;
+            width: 60%;
+            border-bottom: 1px solid black;
+            text-align: left;
+            margin-top: 20px;
+        }
+        #feedback, #wpm, #next-button, #score {
+            margin: 10px 0;
+        }
+        #next-button, #start-btn {
+            cursor: pointer;
+            padding: 5px 10px;
+            font-size: 20px;
+        }
+        #user-info {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #reward-video {
+            display: none;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="user-info">
+        <input type="text" id="user-name" placeholder="Enter your name" />
+        <button id="start-btn">Start</button>
+    </div>
+    <h1>Typing Practice</h1>
+    <div id="score">Score: 0</div>
+    <div id="typed-sentence"></div>
+    <input type="text" id="typing-input" autocomplete="off" style="display:none;" />
+    <div id="feedback"></div>
+    <div id="wpm">WPM: 0</div>
+    <button id="next-button" style="display:none;">Next</button>
+    <video id="reward-video" controls width="320" height="240" muted>
+        <source src="" type="video/mp4">
+        Your browser does not support the video tag.
+    </video>
+
+    <script>
+        let currentSentenceIndex = 0;
+        let startTime;
+        let score = 0;
+        let userName = '';
+        let clips = [];
+
+        document.getElementById('start-btn').addEventListener('click', function() {
+            userName = document.getElementById('user-name').value.trim();
+            if (userName) {
+                document.getElementById('user-info').style.display = 'none';
+                document.getElementById('typing-input').style.display = 'block';
+                fetchClips();
+                fetchSentence(0);
+            } else {
+                alert('Please enter your name to start.');
+            }
+        });
+
+        function fetchClips() {
+            fetch('/clips')
+                .then(response => response.json())
+                .then(data => {
+                    clips = data;
+                })
+                .catch(error => console.error("Failed to fetch clips:", error));
+        }
+
+        function fetchSentence(index) {
+            fetch(`/sentence?index=${index}`)
+                .then(response => response.json())
+                .then(data => {
+                    const sentence = data.sentence;
+                    const sentenceDisplay = document.getElementById('typed-sentence');
+                    sentenceDisplay.innerHTML = '';
+                    sentence.split('').forEach(char => {
+                        const charSpan = document.createElement('span');
+                        charSpan.textContent = char;
+                        sentenceDisplay.appendChild(charSpan);
+                    });
+                    currentSentenceIndex = parseInt(data.nextIndex, 10);
+                    document.getElementById('typing-input').value = '';
+                    document.getElementById('typing-input').focus();
+                    document.getElementById('next-button').style.display = 'none';
+                    startTime = new Date();
+                });
+        }
+
+        function playRandomClip() {
+            if (clips.length > 0) {
+                const randomIndex = Math.floor(Math.random() * clips.length);
+                const videoPath = `./clips/${clips[randomIndex]}`;
+                const videoElement = document.getElementById('reward-video');
+                videoElement.style.display = 'block';
+                videoElement.children[0].src = videoPath; // Set src in the <source> element
+                videoElement.load();
+                videoElement.play().catch(e => console.log("Autoplay was prevented: " + e.message));
+            }
+        }
+
+        function updateTypedSentence() {
+            const inputField = document.getElementById('typing-input');
+            const sentenceDisplay = document.getElementById('typed-sentence').childNodes;
+            const typedText = inputField.value;
+            let correct = true;
+
+            sentenceDisplay.forEach((charSpan, index) => {
+                if (index < typedText.length) {
+                    charSpan.className = typedText[index] === charSpan.textContent ? 'correct' : 'incorrect';
+                    correct = correct && typedText[index] === charSpan.textContent;
+                } else {
+                    charSpan.className = '';
+                }
+            });
+
+            if (correct && typedText.length === sentenceDisplay.length) {
+                score++;
+                document.getElementById('score').textContent = `Score: ${score}`;
+                document.getElementById('feedback').textContent = `Well done, ${userName}! 😊`;
+                document.getElementById('next-button').style.display = 'block';
+                playRandomClip();
+            } else if (!correct) {
+                document.getElementById('feedback').textContent = '';
+            }
+
+            // Calculate WPM
+            if (typedText.length > 0 && startTime) {
+                const elapsedTime = (new Date() - startTime) / 60000; // Time in minutes
+                const wpm = (typedText.length / 5) / elapsedTime; // Approximate words typed
+                document.getElementById('wpm').textContent = `WPM: ${Math.round(wpm)}`;
+            }
+        }
+
+        document.getElementById('typing-input').addEventListener('input', updateTypedSentence);
+
+        document.getElementById('next-button').addEventListener('click', function() {
+            fetchSentence(currentSentenceIndex);
+        });
+
+        window.onload = function() {
+            // Optionally, automatically focus on the user name input field or start button
+        };
+    </script>
+</body>
+</html>
