@@ -2,8 +2,8 @@ package main
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 )
@@ -51,7 +51,7 @@ func sentenceHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func clipsHandler(w http.ResponseWriter, r *http.Request) {
-	files, err := ioutil.ReadDir("./static/clips")
+	files, err := os.ReadDir("./static/clips")
 	if err != nil {
 		http.Error(w, "Error reading clips directory", http.StatusInternalServerError)
 		return
