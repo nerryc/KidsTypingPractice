@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -57,7 +58,7 @@ func clipsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var clips []string
+	clips := []string{}
 	for _, file := range files {
 		if filepath.Ext(file.Name()) == ".mp4" {
 			clips = append(clips, file.Name())
@@ -77,5 +78,6 @@ func main() {
 	http.Handle("/", http.FileServer(http.Dir("./static")))
 	http.HandleFunc("/sentence", sentenceHandler)
 	http.HandleFunc("/clips", clipsHandler)
-	http.ListenAndServe(":8080", nil)
+	log.Println("Addy Gaming → http://localhost:8080")
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
